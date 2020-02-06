@@ -1,5 +1,5 @@
-.pemock
-pemock
-pemock/*
+.pemockenv
+pemockenv
+pemockenv/*
 *.pkl
 *.csv
