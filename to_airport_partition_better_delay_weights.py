@@ -51,20 +51,27 @@ def trip_entropy(kl, ttl):
     return res
 
 
-df = pd.read_csv('to_airport_data.csv')
-df['alpha_hat'] = df.apply(lambda x: random_partition(x.minutes, PARTITION_SIZE), axis=1)
-df['weighted_delays'] = df.apply(lambda x: make_delay_weights(x.minutes), axis=1)
-df['delay_average'] = df.apply(lambda x: shift_delay(x.alpha_hat, x.weighted_delays), axis=1)
-df['divergences'] = df.apply(lambda x: divergence(x.alpha_hat), axis=1)
-df['trip_entropy'] = df.apply(lambda x: trip_entropy(sum(x.divergences), sum(x.alpha_hat)), axis=1)
-train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
+input_df = pd.read_csv('to_airport_data.csv')
 
+
+# in order to predict need to create this ....
+def add_features(indf):
+    indf['alpha_hat'] = df.apply(lambda x: random_partition(x.minutes, PARTITION_SIZE), axis=1)
+    indf['weighted_delays'] = df.apply(lambda x: make_delay_weights(x.minutes), axis=1)
+    indf['delay_average'] = df.apply(lambda x: shift_delay(x.alpha_hat, x.weighted_delays), axis=1)
+    indf['divergences'] = df.apply(lambda x: divergence(x.alpha_hat), axis=1)
+    indf['trip_entropy'] = df.apply(lambda x: trip_entropy(sum(x.divergences), sum(x.alpha_hat)), axis=1)
+    return df
+
+
+df = add_features(input_df)
+train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
 train_drop_target = train_set.drop('minutes', axis=1)
 targets = train_set['minutes'].copy()
+
 pipeL = ColumnTransformer(
     [
-        ("std_scaler_delay_and_entropy", StandardScaler(), ["trip_entropy"]),
-        ("minmax_scaler_delay_and_entropy", MinMaxScaler(), ["delay_average"]),
+        ("std_scaler_delay_and_entropy", StandardScaler(), ["trip_entropy", "delay_average"]),
     ]
 )
 train_prepared = pipeL.fit_transform(train_drop_target)
