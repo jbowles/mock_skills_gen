@@ -31,6 +31,7 @@ func main() {
 		log.Fatal(err)
 	}
 	GenerateBiasRaw(dSize, biasFile)
+
 }
 
 func GenerateRandomRaw(n int, f *os.File) {
@@ -127,9 +128,9 @@ type Student struct {
 	T   Target
 }
 
-//func RandInt(min int, max int) int {
-//	return min + rand.Intn(max-min)
-//}
+func RandIntBetween(min int, max int) int {
+	return min + rand.Intn(max-min)
+}
 func RandIntUnder(n int) int {
 	i := rand.Intn(n)
 	if i == 0 {
@@ -164,6 +165,7 @@ func RandAge(min, max int) int {
 func RandTarget() Target {
 	return targets[RandIntUnder(targetMax)]
 }
+
 func (s *Student) buildRand() *Student {
 	s.Pii = PersonData{
 		FirstName:   fake.FirstName(),
@@ -334,6 +336,7 @@ func csvHeaders() []string {
 		"Target",
 	}
 }
+
 func (s *Student) csvTransform() []string {
 	return []string{
 		strconv.Itoa(s.Pii.Age),
