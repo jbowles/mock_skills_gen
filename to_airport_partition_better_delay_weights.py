@@ -14,7 +14,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 
 PARTITION_SIZE = 10
-DELAY_WEIGHTS = [0.0, 0.2, 0.0, 0.0, 0.2, 0.0, 0.0, 0.0, 0.2, 0.0]
+#DELAY_WEIGHTS = [0.0, 0.0, 0.3, 0.0, 0.0, 0.0, 0.2, 0.0, 0.2, 0.2, 0.0, 0.0, 0.2, 0.0, 0.0, 0.0, 0.2, 0.0, 0.2, 0.2]
+DELAY_WEIGHT_NODES = [2, 3, 5, 6, 9]
 
 
 def random_partition(upper_limit, psize):
@@ -24,8 +25,17 @@ def random_partition(upper_limit, psize):
     return partition
 
 
-def shift_delay(ahat):
-    return np.average(ahat, weights=DELAY_WEIGHTS)
+def make_delay_weights(minutes):
+    # return np.average(ahat, weights=DELAY_WEIGHTS)
+    t = [float(x) * 0.01 for x in random_partition(minutes, len(DELAY_WEIGHT_NODES))]
+    # = [x for x in zip(DELAY_WEIGHT_NODES, t)]  # (index,value) => [(2, 0.24), (4, 0.2), (7, 0.15), (13, 0.22), (18, 0.19)]
+    weights = np.zeros(PARTITION_SIZE)
+    np.put(weights, DELAY_WEIGHT_NODES, t)
+    return weights
+
+
+def shift_delay(ahat, weighted_delays):
+    return np.average(ahat, weights=weighted_delays)
 
 
 def divergence(p):
@@ -43,7 +53,8 @@ def trip_entropy(kl, ttl):
 
 df = pd.read_csv('to_airport_data.csv')
 df['alpha_hat'] = df.apply(lambda x: random_partition(x.minutes, PARTITION_SIZE), axis=1)
-df['delay_average'] = df.apply(lambda x: shift_delay(x.alpha_hat), axis=1)
+df['weighted_delays'] = df.apply(lambda x: make_delay_weights(x.minutes), axis=1)
+df['delay_average'] = df.apply(lambda x: shift_delay(x.alpha_hat, x.weighted_delays), axis=1)
 df['divergences'] = df.apply(lambda x: divergence(x.alpha_hat), axis=1)
 df['trip_entropy'] = df.apply(lambda x: trip_entropy(sum(x.divergences), sum(x.alpha_hat)), axis=1)
 train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
@@ -58,15 +69,14 @@ pipeL = ColumnTransformer(
 )
 train_prepared = pipeL.fit_transform(train_drop_target)
 
-
-# ########### SOME DATA FOR VALIDATION
+# ###SOME DATA FOR VALIDATION
 print("TrainingSet Size:", len(train_set))
 print("")
 some_data = train_drop_target.iloc[:10]
 some_labels = targets.iloc[:10]
 some_data_fitted = pipeL.fit_transform(some_data)
 
-# ########### LINEAR REGRESSION (based on what we saw in explore expect this to be ugly!)
+# ###LINEAR REGRESSION(based on what we saw in explore expect this to be ugly!)
 linreg = LinearRegression()
 linreg.fit(train_prepared, targets)
 print("                     Targets:", list(some_labels))
@@ -82,7 +92,7 @@ linreg_MSE_scores = np.sqrt(-linregscores)
 
 
 def display_scores(scores):
-    # print("Scores", scores)
+        # print("Scores", scores)
     print("              Mean:", scores.mean())
     print("Standard deviation:", scores.std())
     print("")
